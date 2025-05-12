@@ -61,8 +61,15 @@ class NFA:
         return NFA(num_states, delta, start_state, final_state)
 
     def kleene_star(self):
-        self.delta[self.final_state][self.ALPHABET_SIZE].add(self.start_state)
-        self.final_state = self.start_state
+        for _ in range(2):
+            self.delta.append([set() for _ in range(NFA.ALPHABET_SIZE + 1)])
+        self.delta[self.num_states][NFA.ALPHABET_SIZE].add(self.start_state)
+        self.delta[self.final_state][NFA.ALPHABET_SIZE].add(self.num_states + 1)
+        self.delta[self.num_states][NFA.ALPHABET_SIZE].add(self.num_states + 1)
+        self.delta[self.num_states + 1][NFA.ALPHABET_SIZE].add(self.start_state)
+        self.start_state = self.num_states
+        self.final_state = self.num_states + 1
+        self.num_states += 2
 
     def concatenate(self, other):
         for _ in range(other.num_states):
@@ -73,7 +80,7 @@ class NFA:
                 for k in other.delta[i][j]:
                     s.add(k + self.num_states)
                 self.delta[self.num_states + i][j] = s
-        self.delta[self.final_state][self.ALPHABET_SIZE].add(
+        self.delta[self.final_state][NFA.ALPHABET_SIZE].add(
             self.num_states + other.start_state
         )
         self.final_state = self.num_states + other.final_state
@@ -88,14 +95,24 @@ class NFA:
                 for k in other.delta[i][j]:
                     s.add(k + self.num_states)
                 self.delta[self.num_states + i][j] = s
-        self.delta[self.start_state][self.ALPHABET_SIZE].add(
+        for _ in range(2):
+            self.delta.append([set() for _ in range(NFA.ALPHABET_SIZE + 1)])
+        self.delta[self.num_states + other.num_states][NFA.ALPHABET_SIZE].add(
+            self.start_state
+        )
+        self.delta[self.num_states + other.num_states][NFA.ALPHABET_SIZE].add(
             self.num_states + other.start_state
         )
-        self.delta[self.final_state][self.ALPHABET_SIZE].add(
-            self.num_states + other.final_state
+        self.delta[self.final_state][NFA.ALPHABET_SIZE].add(
+            self.num_states + other.num_states + 1
         )
-        self.final_state = self.num_states + other.final_state
+        self.delta[self.num_states + other.final_state][NFA.ALPHABET_SIZE].add(
+            self.num_states + other.num_states + 1
+        )
+        self.start_state = self.num_states + other.num_states
+        self.final_state = self.start_state + 1
         self.num_states += other.num_states
+        self.num_states += 2
 
     def epsilon_closure(self, state):
         stack = [state]
@@ -174,7 +191,7 @@ class DFA:
 def dfa_from_regex(regex):
     postfix = infix_to_postfix(regex)
     nfa = postfix_to_nfa(postfix)
-    dfa = NFA.to_dfa(nfa)
+    dfa = nfa.to_dfa()
     return dfa
 
 
